@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MaGnat — created for Elizabeth</title>
+  <style>
+    :root { --bg:#0f172a; --card:#111827; --muted:#94a3b8; --text:#e5e7eb; --line:#1f2937; }
+    *{box-sizing:border-box} body{margin:0; font-family:system-ui,Segoe UI,Roboto,sans-serif; background:linear-gradient(180deg,#0b1220,#0f172a);}
+    .wrap{max-width:960px; margin:40px auto; padding:0 16px;}
+    .card{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,.25);}
+    h1{color:var(--text); font-size:26px; margin:0 0 8px}
+    p.subtitle{color:var(--muted); margin:0 0 20px}
+    .grid{display:grid; gap:16px}
+    @media(min-width:840px){ .grid-2{grid-template-columns:1.2fr .8fr} }
+    label{display:block; color:var(--muted); font-size:14px; margin-bottom:6px}
+    select, textarea, input[type="range"]{
+      width:100%; border:1px solid var(--line); background:#0b1020; color:var(--text);
+      border-radius:12px; padding:10px; outline:none;
+    }
+    textarea{min-height:180px; resize:vertical; line-height:1.5}
+    .row{display:flex; gap:10px; flex-wrap:wrap}
+    .btn{
+      appearance:none; border:1px solid var(--line); background:#111b34; color:var(--text);
+      padding:10px 14px; border-radius:12px; cursor:pointer; transition:.15s transform, .15s opacity;
+    }
+    .btn:hover{transform:translateY(-1px)}
+    .btn:disabled{opacity:.5; cursor:not-allowed}
+    .btn.primary{background:#1f3a78}
+    .ctrl{display:grid; gap:12px}
+    .range-row{display:grid; grid-template-columns:1fr 70px; gap:10px; align-items:center}
+    .hint{color:var(--muted); font-size:13px}
+    .pill{font-size:12px; color:#cbd5e1; background:#0b1222; border:1px solid var(--line); padding:4px 8px; border-radius:999px}
+    .footer{margin-top:12px; color:var(--muted); font-size:12px}
+    .link{color:#a5b4fc; text-decoration:none}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>MaGnat — for Elizabeth</h1>
+      <p class="subtitle"></p>
+
+      <div class="grid grid-2">
+        <div class="grid">
+          <div>
+            <label for="lang">Мова</label>
+            <select id="lang">
+              <option value="en-GB">English (UK)</option>
+            </select>
+            <div class="hint">Після вибору мови — оберіть конкретний голос.</div>
+          </div>
+
+          <div>
+            <label for="voice">Голос</label>
+            <select id="voice">
+              <option>Завантаження голосів…</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="text">Текст для озвучення</label>
+            <textarea id="text" placeholder="Вставте або введіть текст англійською (або іншою мовою) тут...">AI can help us learn pronunciation by reading aloud any text we paste here. Try changing the rate and pitch to match your preference.</textarea>
+            <div class="row" style="margin-top:8px">
+              <span class="pill" id="charCount">0 symbols</span>
+              <span class="pill" id="wordCount">0 words</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="ctrl">
+          <div>
+            <label>Швидкість (Rate)</label>
+            <div class="range-row">
+              <input id="rate" type="range" min="0.5" max="2" step="0.1" value="1" />
+              <span class="pill" id="rateVal">1.0×</span>
+            </div>
+          </div>
+          <div>
+            <label>Висота (Pitch)</label>
+            <div class="range-row">
+              <input id="pitch" type="range" min="0" max="2" step="0.1" value="1" />
+              <span class="pill" id="pitchVal">1.0</span>
+            </div>
+          </div>
+          <div>
+            <label>Гучність (Volume)</label>
+            <div class="range-row">
+              <input id="volume" type="range" min="0" max="1" step="0.1" value="1" />
+              <span class="pill" id="volVal">100%</span>
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:6px">
+            <button class="btn primary" id="playBtn">▶️ Відтворити</button>
+            <button class="btn" id="pauseBtn">⏸️ Пауза</button>
+            <button class="btn" id="resumeBtn">⏯️ Продовжити</button>
+            <button class="btn" id="stopBtn">⏹️ Стоп</button>
+          </div>
+
+          <hr style="border:0; border-top:1px solid var(--line)">
+
+          <div>
+            <label>Завантажити аудіо</label>
+            <div class="hint" style="margin-bottom:8px">
+              Кнопка нижче тимчасово <b>записує звук вкладки</b> під час озвучення і зберігає файл <code>.webm</code>.
+            </div>
+            <div class="row">
+              <button class="btn" id="recBtn">🔴 Записати і скачати</button>
+              <a id="downloadLink" class="btn link" style="display:none" download="tts_recording.webm">⬇️ Завантажити файл</a>
+            </div>
+            <div class="hint" id="recHint"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer">
+        Порада: браузерні голоси відрізняються. Якщо список пустий — натисніть «Відтворити» один раз або перезавантажте сторінку, щоб <code>speechSynthesis</code> ініціалізувався.
+      </div>
+    </div>
+  </div>
+
+<script>
+  // --- Elements
+  const langSel = document.getElementById('lang');
+  const voiceSel = document.getElementById('voice');
+  const textEl  = document.getElementById('text');
+  const rateEl  = document.getElementById('rate');
+  const pitchEl = document.getElementById('pitch');
+  const volEl   = document.getElementById('volume');
+  const rateVal = document.getElementById('rateVal');
+  const pitchVal= document.getElementById('pitchVal');
+  const volVal  = document.getElementById('volVal');
+
+  const playBtn   = document.getElementById('playBtn');
+  const pauseBtn  = document.getElementById('pauseBtn');
+  const resumeBtn = document.getElementById('resumeBtn');
+  const stopBtn   = document.getElementById('stopBtn');
+
+  const recBtn       = document.getElementById('recBtn');
+  const recHint      = document.getElementById('recHint');
+  const downloadLink = document.getElementById('downloadLink');
+
+  const charCount = document.getElementById('charCount');
+  const wordCount = document.getElementById('wordCount');
+
+  let voices = [];
+  let currentUtterance = null;
+  let mediaRecorder = null;
+  let recordedChunks = [];
+
+  // --- Helpers
+  function updateCounters() {
+    const t = textEl.value || "";
+    charCount.textContent = `${t.length} symbols`;
+    const words = t.trim().split(/\s+/).filter(Boolean);
+    wordCount.textContent = `${words.length} words`;
+  }
+  updateCounters();
+  textEl.addEventListener('input', updateCounters);
+
+  // Разрешённый голос — один
+  const VOICE_WHITELIST = [/Google UK English Male/i];
+
+  function isAllowedVoice(v) {
+    return VOICE_WHITELIST.some(rule =>
+      typeof rule === 'string' ? v.name === rule : rule.test(v.name)
+    );
+  }
+
+  // ОСТАВЛЯЕМ ТОЛЬКО "Google UK English Male"
+  function populateVoices() {
+    voices = speechSynthesis.getVoices() || [];
+
+    // 1) Ищем whitelisted голос
+    let arr = voices.filter(isAllowedVoice);
+
+    // 2) Если его нет — пробуем любой Google-голос en-GB (подстраховка)
+    if (!arr.length) {
+      arr = voices.filter(v => /Google/i.test(v.name) && (v.lang || '').startsWith('en-GB'));
+    }
+
+    voiceSel.innerHTML = '';
+    if (!arr.length) {
+      // 3) Совсем нет подходящих — сообщаем пользователю
+      const opt = document.createElement('option');
+      opt.textContent = 'Voice not found (need Google UK English Male)';
+      opt.value = '';
+      voiceSel.appendChild(opt);
+      return;
+    }
+
+    // Добавляем ТОЛЬКО первый найденный (то есть один вариант)
+    const v = arr[0];
+    const opt = document.createElement('option');
+    opt.value = v.name;
+    opt.textContent = `${v.name} — ${v.lang}`;
+    voiceSel.appendChild(opt);
+    voiceSel.selectedIndex = 0;
+  }
+
+  // Try to load voices (Chrome fires onvoiceschanged)
+  populateVoices();
+  window.speechSynthesis.onvoiceschanged = populateVoices;
+  langSel.addEventListener('change', populateVoices);
+
+  // Sliders UI
+  function fmt(n, suf='') { return (''+Number(n).toFixed(suf ? 0 : 1)) + suf; }
+  rateEl.addEventListener('input', () => rateVal.textContent = fmt(rateEl.value)+'×');
+  pitchEl.addEventListener('input', () => pitchVal.textContent = fmt(pitchEl.value,''));
+  volEl.addEventListener('input', () => volVal.textContent = fmt(volEl.value*100,0)+'%');
+  rateVal.textContent = '1.0×'; pitchVal.textContent='1.0'; volVal.textContent='100%';
+
+  // Build utterance
+  function makeUtterance() {
+    const u = new SpeechSynthesisUtterance(textEl.value);
+
+    // жёстко выбираем нужный голос по имени; если не найден — берём первый из select/списка
+    const prefer = voices.find(v => /Google UK English Male/i.test(v.name));
+    const bySelect = voices.find(v => v.name === voiceSel.value);
+    const v = prefer || bySelect || voices[0];
+
+    if (v) {
+      u.voice = v;
+      u.lang  = v.lang || 'en-GB';
+    }
+    u.rate = parseFloat(rateEl.value);
+    u.pitch = parseFloat(pitchEl.value);
+    u.volume = parseFloat(volEl.value);
+    u.onend = () => { currentUtterance = null; };
+    u.onerror = (e) => { console.error('TTS error', e); currentUtterance = null; };
+    return u;
+  }
+
+  function speak() {
+    stop(); // clear queue
+    const txt = textEl.value.trim();
+    if (!txt) return;
+    const u = makeUtterance();
+    currentUtterance = u;
+    speechSynthesis.speak(u);
+  }
+
+  function pause() {
+    if (speechSynthesis.speaking && !speechSynthesis.paused) speechSynthesis.pause();
+  }
+  function resume() {
+    if (speechSynthesis.paused) speechSynthesis.resume();
+  }
+  function stop() {
+    speechSynthesis.cancel();
+    currentUtterance = null;
+  }
+
+  playBtn.addEventListener('click', speak);
+  pauseBtn.addEventListener('click', pause);
+  resumeBtn.addEventListener('click', resume);
+  stopBtn.addEventListener('click', stop);
+
+  // --- Record & Download (captures TAB audio while TTS is playing)
+  async function recordAndDownload() {
+    try {
+      recordedChunks = [];
+      downloadLink.style.display = 'none';
+      recHint.textContent = 'Запитуємо дозвіл на захоплення звуку вкладки…';
+
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: false,
+        audio: { echoCancellation: false, noiseSuppression: false }
+      });
+
+      if (!stream.getAudioTracks().length) {
+        recHint.textContent = 'Не вдалось отримати аудіо з вкладки. Оберіть у вікні саме цю вкладку і дозвольте звук.';
+        return;
+      }
+
+      recHint.textContent = 'Запис пішов. Починаю озвучення…';
+      mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+
+      mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+        const url = URL.createObjectURL(blob);
+        downloadLink.href = url;
+        downloadLink.style.display = 'inline-block';
+        recHint.textContent = 'Готово! Збережіть файл.';
+        stream.getTracks().forEach(t => t.stop());
+      };
+
+      mediaRecorder.start();
+
+      // Speak now
+      stop(); // just in case
+      const u = makeUtterance();
+      u.onend = () => { setTimeout(() => mediaRecorder.stop(), 150); };
+      speechSynthesis.speak(u);
+
+    } catch (err) {
+      console.error(err);
+      recHint.textContent = 'Помилка доступу до запису вкладки. Спробуйте інший браузер або дозвольте звук вкладки.';
+    }
+  }
+
+  recBtn.addEventListener('click', recordAndDownload);
+</script>
+
+</body>
+</html>
